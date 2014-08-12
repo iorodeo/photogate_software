@@ -41,6 +41,14 @@ bool Photogate::isConnected()
 }
 
 
+void Photogate::reset()
+{
+    state_ =  READY;
+    entryTime_ = 0;
+    exitTime_ = 0;
+}
+
+
 PhotogateConfig Photogate::getConfig()
 {
     return config_;
@@ -120,7 +128,7 @@ void Photogate::updateSignalBitMaskAndPort()
 {
     signalPinBitMask_ = digitalPinToBitMask(config_.signalPin);
     uint8_t signalPort = digitalPinToPort(config_.signalPin);
-    signalPortOutReg_ = portOutputRegister(signalPort);
+    signalPortInReg_ = portInputRegister(signalPort);
 }
 
 

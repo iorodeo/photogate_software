@@ -6,8 +6,9 @@ struct PhotogateConfig;
 namespace constants 
 {
 
-    enum {NUM_PHOTOGATE=2};
-    extern const PhotogateConfig PHOTOGATE_CONFIG[NUM_PHOTOGATE];
+    enum {NUMBER_OF_PHOTOGATES=2};
+    extern const PhotogateConfig PHOTOGATE_CONFIG[NUMBER_OF_PHOTOGATES];
+    extern const int RESET_PIN;
 
 }
 

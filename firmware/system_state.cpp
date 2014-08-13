@@ -114,7 +114,7 @@ void SystemState::sendListData()
     Serial << getRunTime() << ',';
     for (int i=0; i < constants::NUMBER_OF_PHOTOGATES; i++)
     {
-        photogate_[i].sendListData();
+        photogate_[i].sendListData(startTime_);
         if (i < constants::NUMBER_OF_PHOTOGATES-1)
         {
             Serial << ',';
@@ -134,7 +134,7 @@ void SystemState::sendJsonData()
     Serial << "[";
     for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
     {
-        photogate_[i].sendJsonData();
+        photogate_[i].sendJsonData(startTime_);
         if (i<constants::NUMBER_OF_PHOTOGATES-1)
         {
             Serial << ',';
@@ -154,7 +154,7 @@ void SystemState::sendPrettyData()
     for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
     {
         Serial << "photogate: " << i << endl;
-        photogate_[i].sendPrettyData();
+        photogate_[i].sendPrettyData(startTime_);
     }
     Serial << endl;
 }
@@ -200,8 +200,7 @@ unsigned long SystemState::getRunTime()
                 {
                     if (photogate_[i].isConnected())
                     {
-                        unsigned long  exitTime = photogate_[i].getExitTime();
-                        runTime = exitTime  - startTime_;
+                        runTime = photogate_[i].getExitTime(startTime_);
                         break;
                     }
                 }
@@ -211,8 +210,7 @@ unsigned long SystemState::getRunTime()
                 // Runtime maximum over all photogate e.g. maximum (exitTime - startTime)
                 for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
                 {
-                    unsigned long exitTime = photogate_[i].getExitTime();
-                    unsigned long runTimeTmp = exitTime - startTime_;
+                    unsigned long runTimeTmp = photogate_[i].getExitTime(startTime_);
                     if (runTimeTmp > runTime)
                     {
                         runTime = runTimeTmp;

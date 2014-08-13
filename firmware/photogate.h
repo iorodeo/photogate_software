@@ -39,16 +39,16 @@ class Photogate
 
         int getInterruptNum();
 
-        unsigned long  getEntryTime();
-        unsigned long  getExitTime();
+        unsigned long  getEntryTime(unsigned long startTime=0);
+        unsigned long  getExitTime(unsigned long startTime=0);
         State getState();
         bool hasEntryTime();
         bool hasExitTime();
         bool isDone();
 
-        void sendListData();
-        void sendJsonData();
-        void sendPrettyData();
+        void sendListData(unsigned long startTime=0);
+        void sendJsonData(unsigned long startTime=0);
+        void sendPrettyData(unsigned long startTime=0);
         const char* getStateStr();
 
 

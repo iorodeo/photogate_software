@@ -103,26 +103,39 @@ int Photogate::getInterruptNum()
 }
 
 
-unsigned long  Photogate::getEntryTime()
+unsigned long  Photogate::getEntryTime(unsigned long startTime)
 {
-    unsigned long entryTimeCpy;
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    if (!hasEntryTime())
     {
-        entryTimeCpy = entryTime_;
+        return 0;
     }
-    return entryTimeCpy;
+    else
+    {
+        unsigned long entryTimeCpy;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+        {
+            entryTimeCpy = entryTime_;
+        }
+        return entryTimeCpy - startTime;
+    }
 }
 
 
-unsigned long  Photogate::getExitTime()
+unsigned long  Photogate::getExitTime(unsigned long startTime)
 {
-    unsigned long exitTimeCpy;
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    if (!hasExitTime())
     {
-        exitTimeCpy = exitTime_;
+        return 0;
     }
-
-    return exitTimeCpy;
+    else
+    {
+        unsigned long exitTimeCpy;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+        {
+            exitTimeCpy = exitTime_;
+        }
+        return exitTimeCpy - startTime;
+    }
 }
 
 
@@ -176,38 +189,38 @@ bool Photogate::isDone()
 }
 
 
-void Photogate::sendListData()
+void Photogate::sendListData(unsigned long startTime)
 {
     Serial << getState() << ',';
     Serial << hasEntryTime() << ',';
-    Serial << getEntryTime() << ',';
+    Serial << getEntryTime(startTime) << ',';
     Serial << hasExitTime() << ',';
-    Serial << getExitTime() << ',';
+    Serial << getExitTime(startTime) << ',';
     Serial << isDone();
 }
 
 
-void Photogate::sendJsonData()
+void Photogate::sendJsonData(unsigned long startTime)
 {
     Serial << '{';
     Serial << "\"state\"" << ':' << getStateStr();
     Serial << ",\"isConnected\"" << ':' << boolToStr(isConnected());
     Serial << ",\"hasEntryTime\"" << ':' << boolToStr(hasEntryTime());
-    Serial << ",\"entryTime\"" << ':' << entryTime_;
+    Serial << ",\"entryTime\"" << ':' << getEntryTime(startTime);
     Serial << ",\"hasExitTime\"" << ':' << boolToStr(hasExitTime());
-    Serial << ",\"exitTime\"" << ':' << exitTime_ << endl;
+    Serial << ",\"exitTime\"" << ':' << getExitTime(startTime)<< endl;
     Serial << ",\"isDone\"" << ':' << boolToStr(isDone());
     Serial << '}';
 }
 
 
-void Photogate::sendPrettyData()
+void Photogate::sendPrettyData(unsigned long startTime)
 {
     Serial << "  state:        " << getState() << endl;
     Serial << "  hasEntryTime: " << hasEntryTime() << endl;
-    Serial << "  entryTime:    " << getEntryTime() << endl;
+    Serial << "  entryTime:    " << getEntryTime(startTime) << endl;
     Serial << "  hasExitTime:  " << hasExitTime() << endl;
-    Serial << "  exitTime:     " << getExitTime() << endl;
+    Serial << "  exitTime:     " << getExitTime(startTime) << endl;
     Serial << "  isDone:       " << isDone() << endl;
 }
 

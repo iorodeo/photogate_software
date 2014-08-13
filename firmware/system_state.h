@@ -6,22 +6,30 @@
 class SystemState
 {
     public:
-        enum OperatingMode {NO_PHOTOGATE, ONE_PHOTOGATE, TWO_PHOTOGATE};
-        
+        enum OperatingMode {NO_PHOTOGATE=0, ONE_PHOTOGATE, TWO_PHOTOGATE};
+
         SystemState();
         void initialize();
         void update();
         void reset();
+        void handleSerialRequest();
+        void sendListData();
+        void sendJsonData();
+        void sendPrettyData();
         void onPhotogatePinChange(int photogateNum);
+        unsigned long getRunTime();
+        const char* getOperatingModeStr();
 
     protected:
         Photogate photogate_[constants::NUMBER_OF_PHOTOGATES];
         unsigned long startTime_;
         OperatingMode operatingMode_;
+        bool running_;
 
         void checkOperatingMode();
         void checkForResetButton();
         void updatePhotogateLed();
+        void checkRunTime();
 };
 
 #endif

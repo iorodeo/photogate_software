@@ -1,6 +1,7 @@
 #include "system_state.h"
 #include <Streaming.h>
 #include "firmware.h"
+#include "utility.h"
 
 void (*onPinChangeFunc[constants::NUMBER_OF_PHOTOGATES])() = 
 {
@@ -17,7 +18,10 @@ SystemState::SystemState() {}
 
 void SystemState::initialize()
 {
+    Serial.begin(constants::BAUDRATE);
+
     // Setup photogates
+    noInterrupts();
     for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
     {
         photogate_[i].setConfig(constants::PHOTOGATE_CONFIG[i]); 
@@ -25,20 +29,27 @@ void SystemState::initialize()
         int interruptNum = photogate_[i].getInterruptNum();
         attachInterrupt(interruptNum, onPinChangeFunc[i] ,CHANGE);
     }
+    interrupts();
 
     // Setup reset pin
     pinMode(constants::RESET_PIN,INPUT_PULLUP);
 
-    // Reset time counter and enable interrtups
-    update();
+    // Update
     reset();
-    interrupts();
+    update();
 }
 
 
 void SystemState::reset()
 {
+    noInterrupts();
     startTime_ = micros();
+    for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
+    {
+        photogate_[i].reset();
+    }
+    running_ = true;
+    interrupts();
 }
 
 
@@ -47,40 +58,160 @@ void SystemState::update()
     checkOperatingMode();
     checkForResetButton();
     updatePhotogateLed();
+    checkRunTime();
+}
 
 
-    Serial << "startTime:     " << startTime_ << endl;
+void SystemState::handleSerialRequest()
+{
+    while (Serial.available() > 0)
+    {
+        char cmd = Serial.read();
+        switch (cmd)
+        {
+            case 'r':
+                reset();
+                break;
+
+            case 'l':
+                sendListData();
+                break;
+
+            case 'j':
+                sendJsonData();
+                break;
+
+            case 'p':
+                sendPrettyData();
+
+            default:
+                break;
+
+        }
+    }
+}
+
+
+void SystemState::sendListData()
+{
+    Serial << '[';
+    Serial << running_ << ',';
+    Serial << operatingMode_ << ',';
+    Serial << startTime_ << ',';
+    Serial << getRunTime() << ',';
+    for (int i=0; i < constants::NUMBER_OF_PHOTOGATES; i++)
+    {
+        photogate_[i].sendListData();
+    }
+    Serial << ']';
+}
+
+void SystemState::sendJsonData()
+{
+    Serial << '{';
+    Serial << "\"running\"" << ':' << boolToStr(running_);
+    Serial << ",\"operatingMode\"" << ':' << getOperatingModeStr();
+    Serial << ",\"startTime\"" << ':' << startTime_;
+    Serial << ",\"runTime\"" << ':' << getRunTime();
+    Serial << "[";
+    for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
+    {
+        photogate_[i].sendJsonData();
+        if (i<constants::NUMBER_OF_PHOTOGATES-1)
+        {
+            Serial << ',';
+        }
+    }
+    Serial << ']';
+    Serial << '}' << endl;
+}
+
+void SystemState::sendPrettyData()
+{
+    Serial << "running:       " << running_ << endl;
     Serial << "operatingMode: " << operatingMode_ << endl;
-    Serial << "sig 0:         " << photogate_[0].getSignal() << endl;
-    Serial << "sig 1:         " << photogate_[1].getSignal() << endl;
+    Serial << "startTime:     " << startTime_ << endl;
+    Serial << "runTime:       " <<  getRunTime() << endl;
+    for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
+    {
+        Serial << "photogate: " << i << endl;
+        photogate_[i].sendPrettyData();
+    }
     Serial << endl;
+}
+
+
+const char* SystemState::getOperatingModeStr()
+{
+    switch (operatingMode_)
+    {
+        case NO_PHOTOGATE:
+            return "NO_PHOTOGATE";
+
+        case ONE_PHOTOGATE:
+            return "ONE_PHOTOGATE";
+
+        case TWO_PHOTOGATE:
+            return "TWO_PHOTOGATE";
+
+        default:
+            return "UNKNOWN";
+    }
+}
+
+
+unsigned long SystemState::getRunTime()
+{
+    if (running_)
+    {
+        unsigned long currTime = micros();
+        unsigned long runTime = currTime - startTime_;
+        return runTime;
+    }
+    else
+    {
+        return constants::MAXIMUM_RUNTIME;
+    }
 }
 
 
 void SystemState::onPhotogatePinChange(int photogateNum)
 {
-    for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
+    if (!running_)
     {
-        photogate_[i].setLedFromSignal();
+        return;
     }
-    //static bool state[constants::NUMBER_OF_PHOTOGATES] = {0,0};
 
-    //if (photogateNum >= constants::NUMBER_OF_PHOTOGATES)
-    //{
-    //    return;
-    //}
+    switch (operatingMode_)
+    {
+        case NO_PHOTOGATE:
+            break;
 
-    //if (state[photogateNum] == true)
-    //{
-    //    photogate_[photogateNum].setLedOff();
-    //    state[photogateNum] = false;
-    //}
-    //else
-    //{
-    //    photogate_[photogateNum].setLedOn();
-    //    state[photogateNum] = true;
-    //}
+        case ONE_PHOTOGATE:
+            // Single phtotgate case always update
+            photogate_[photogateNum].update();
+            break;
 
+        case TWO_PHOTOGATE:
+            if (photogateNum == 0)
+            {
+                //Photogate 0 always updates
+                photogate_[photogateNum].update();
+            }
+            else
+            {
+                // Photogate 1 update only if photoage 0 has registered an event 
+                if (photogate_[0].getState() != Photogate::READY)
+                {
+                    photogate_[photogateNum].update();
+                }
+            }
+            break;
+
+        default:
+            // Do nothing 
+            break;
+    }
 }
 
 // SystemState Protected Methods
@@ -120,6 +251,7 @@ void SystemState::checkOperatingMode()
    if (mode != operatingMode_)
    {
        operatingMode_ = mode;
+       reset(); // Is this what we want to do
    }
 }
 
@@ -138,7 +270,15 @@ void SystemState::checkForResetButton()
     int resetPinValue = digitalRead(constants::RESET_PIN);
     if (resetPinValue == LOW)
     {
-        startTime_ = micros();
+        reset();
     }
 }
 
+void  SystemState::checkRunTime()
+{
+    unsigned long runTime = getRunTime();
+    if (runTime >= constants::MAXIMUM_RUNTIME)
+    {
+        running_ = false;
+    } 
+}

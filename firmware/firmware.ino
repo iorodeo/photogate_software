@@ -1,21 +1,21 @@
 #include <Streaming.h>
 #include "firmware.h"
-#include "system_state.h"
-#include "photogate.h"
 #include "constants.h"
+#include "utility.h"
+#include "photogate.h"
+#include "system_state.h"
 
 SystemState systemState;
 
 void setup()
 {
-    Serial.begin(115200);
     systemState.initialize();
 }
 
 void loop()
 {
     systemState.update();
-    delay(50);
+    systemState.handleSerialRequest();
 }
 
 void onPhotogatePinChange0()

@@ -17,7 +17,7 @@ class Photogate
 {
     public:
 
-        enum State {READY, MEASURING, DONE};
+        enum State {READY=0, MEASURING, DONE};
 
         Photogate(PhotogateConfig config=DEFAULT_CONFIG);
         void initialize();
@@ -39,13 +39,26 @@ class Photogate
 
         int getInterruptNum();
 
+        unsigned long  getEntryTime();
+        unsigned long  getExitTime();
+        bool hasEntryTime();
+        bool hasExitTime();
+        bool isDone();
+
+        void sendListData();
+        void sendJsonData();
+        void sendPrettyData();
+        const char* getStateStr();
+
 
         inline void setLedOn();
         inline void setLedOff();
         inline void setLedFromSignal();
+        inline void setLedFromSignal(int signal);
         inline int getSignal();
         inline State getState();
         inline bool isConnected();
+        inline void update();
 
     protected:
 
@@ -87,6 +100,12 @@ inline void Photogate::setLedOff()
 inline void Photogate::setLedFromSignal()
 {
     int signal = getSignal();
+    setLedFromSignal(signal);
+}
+
+
+inline void Photogate::setLedFromSignal(int signal)
+{
     if (isConnected())
     {
         if (signal == LOW)
@@ -134,6 +153,43 @@ inline bool Photogate::isConnected()
     {
         return true;
     }
+}
+
+
+inline void Photogate::update()
+{
+    int signal = getSignal();
+    unsigned long eventTime = micros();
+
+    if (isConnected())
+    {
+        switch (state_)
+        {
+            case READY:
+                if (signal == LOW)
+                {
+                    entryTime_ = eventTime;
+                    state_ = MEASURING;
+                }
+                break;
+
+            case MEASURING:
+                if (signal == HIGH)
+                {
+                    exitTime_ = eventTime;
+                    state_ = DONE;
+                }
+                break;
+
+            case DONE:
+                break;
+
+            default:
+                // state_ not READY, MEASURING, or done - shouldn't happen
+                break;
+        }
+    }
+    setLedFromSignal(signal);
 }
 
 #endif

@@ -1,5 +1,6 @@
 #include "photogate.h"
 #include <Streaming.h>
+#include "utility.h"
 
 // Photogate Public Methods
 // ----------------------------------------------------------------------------
@@ -18,6 +19,7 @@ void Photogate::initialize()
     pinMode(config_.autoDetectPin,INPUT_PULLUP);
     digitalWrite(config_.ledPin,HIGH);
     initFlag_ = true;
+    reset();
 };
 
 
@@ -25,8 +27,6 @@ bool Photogate::isInitialized()
 {
     return initFlag_;
 }
-
-
 
 
 void Photogate::reset()
@@ -46,6 +46,15 @@ void Photogate::setConfig(PhotogateConfig config)
 {
     config_ = config;
     updateAllBitMaskAndPort();
+}
+
+
+void Photogate::printConfig()
+{
+    Serial << "ledPin         = " << config_.ledPin << endl;
+    Serial << "signalPin      = " << config_.signalPin << endl;
+    Serial << "autoDetectPin  = " << config_.autoDetectPin << endl;
+    Serial << "interruptNum   = " << config_.interruptNum << endl;
 }
 
 
@@ -93,14 +102,111 @@ int Photogate::getInterruptNum()
 }
 
 
-void Photogate::printConfig()
+unsigned long  Photogate::getEntryTime()
 {
-    Serial << "ledPin         = " << config_.ledPin << endl;
-    Serial << "signalPin      = " << config_.signalPin << endl;
-    Serial << "autoDetectPin  = " << config_.autoDetectPin << endl;
-    Serial << "interruptNum   = " << config_.interruptNum << endl;
-
+    return entryTime_;
 }
+
+
+unsigned long  Photogate::getExitTime()
+{
+    return exitTime_;
+}
+
+
+bool Photogate::hasEntryTime()
+{
+    if (state_ != READY)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+
+bool Photogate::hasExitTime()
+{
+    if (state_ == DONE)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+
+bool Photogate::isDone()
+{
+    if (state_ == DONE)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+
+void Photogate::sendListData()
+{
+    Serial << state_ << ',';
+    Serial << hasEntryTime() << ',';
+    Serial << entryTime_ << ',';
+    Serial << hasExitTime() << ',';
+    Serial << exitTime_ << ',';
+    Serial << isDone() << ',';
+}
+
+
+void Photogate::sendJsonData()
+{
+    Serial << '{';
+    Serial << "\"state\"" << ':' << getStateStr();
+    Serial << ",\"isConnected\"" << ':' << boolToStr(isConnected());
+    Serial << ",\"hasEntryTime\"" << ':' << boolToStr(hasEntryTime());
+    Serial << ",\"entryTime\"" << ':' << entryTime_;
+    Serial << ",\"hasExitTime\"" << ':' << boolToStr(hasExitTime());
+    Serial << ",\"exitTime\"" << ':' << exitTime_ << endl;
+    Serial << ",\"isDone\"" << ':' << boolToStr(isDone());
+    Serial << '}';
+}
+
+
+void Photogate::sendPrettyData()
+{
+    Serial << "  state:        " << state_ << endl;
+    Serial << "  hasEntryTime: " << hasEntryTime() << endl;
+    Serial << "  entryTime:    " << entryTime_ << endl;
+    Serial << "  hasExitTime:  " << hasExitTime() << endl;
+    Serial << "  exitTime:     " << exitTime_ << endl;
+    Serial << "  isDone:       " << isDone() << endl;
+}
+
+
+const char* Photogate::getStateStr()
+{
+    switch (state_)
+    {
+        case READY:
+            return "READY";
+
+        case MEASURING:
+            return "MEASURING";
+
+        case DONE:
+            return "DONE";
+
+        default:
+            return "UNKNOWN";
+    }
+}
+
 
 // Photogate Protected methods
 // ----------------------------------------------------------------------------

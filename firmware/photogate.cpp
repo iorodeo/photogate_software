@@ -27,18 +27,6 @@ bool Photogate::isInitialized()
 }
 
 
-bool Photogate::isConnected()
-{
-    int pinValue = digitalRead(config_.autoDetectPin);
-    if (pinValue == HIGH)
-    {
-        return false;
-    }
-    else
-    {
-        return true;
-    }
-}
 
 
 void Photogate::reset()
@@ -144,5 +132,5 @@ void Photogate::updateAutoDetectBitMaskAndPort()
 {
     autoDetectPinBitMask_ = digitalPinToBitMask(config_.autoDetectPin);
     uint8_t autoDetectPort = digitalPinToPort(config_.autoDetectPin);
-    autoDetectPortOutReg_ = portOutputRegister(autoDetectPort);
+    autoDetectPortInReg_ = portInputRegister(autoDetectPort);
 }

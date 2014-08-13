@@ -22,23 +22,30 @@ class Photogate
         Photogate(PhotogateConfig config=DEFAULT_CONFIG);
         void initialize();
         bool isInitialized();
-        bool isConnected();
         void reset();
 
         PhotogateConfig getConfig();
         void setConfig(PhotogateConfig config);
+        void printConfig();
+
         int getLedPin();
         void setLedPin(int pinNum);
+
         int getSignalPin();
         void setSignalPin(int pinNum);
+
         int getAutoDetectPin();
         void setAutoDetectPin(int pinNum); 
+
         int getInterruptNum();
-        void printConfig();
+
+
         inline void setLedOn();
         inline void setLedOff();
+        inline void setLedFromSignal();
         inline int getSignal();
         inline State getState();
+        inline bool isConnected();
 
     protected:
 
@@ -54,7 +61,7 @@ class Photogate
         uint8_t signalPinBitMask_;
 
         volatile uint8_t *ledPortOutReg_;
-        volatile uint8_t *autoDetectPortOutReg_;
+        volatile uint8_t *autoDetectPortInReg_;
         volatile uint8_t *signalPortInReg_;
 
         void updateLedBitMaskAndPort();
@@ -67,13 +74,34 @@ class Photogate
 
 inline void Photogate::setLedOn()
 {
-    *ledPortOutReg_ &= ~ledPinBitMask_;
+    *ledPortOutReg_ |= ledPinBitMask_;
 }
 
 
 inline void Photogate::setLedOff()
 {
-    *ledPortOutReg_ |= ledPinBitMask_;
+    *ledPortOutReg_ &= ~ledPinBitMask_;
+}
+
+
+inline void Photogate::setLedFromSignal()
+{
+    int signal = getSignal();
+    if (isConnected())
+    {
+        if (signal == LOW)
+        {
+            setLedOff();
+        }
+        else
+        {
+            setLedOn();
+        }
+    }
+    else
+    {
+        setLedOff();
+    }
 }
 
 
@@ -81,11 +109,11 @@ inline int Photogate::getSignal()
 {
     if (*signalPortInReg_ & signalPinBitMask_)
     {
-        return true;
+        return HIGH;
     }
     else
     {
-        return false;
+        return LOW; 
     }
 }
 
@@ -95,4 +123,17 @@ inline Photogate::State Photogate::getState()
     return state_;
 }
  
+
+inline bool Photogate::isConnected()
+{
+    if (*autoDetectPortInReg_ & autoDetectPinBitMask_)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
 #endif

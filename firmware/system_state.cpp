@@ -59,24 +59,27 @@ void SystemState::update()
 
 void SystemState::onPhotogatePinChange(int photogateNum)
 {
-    static bool state[constants::NUMBER_OF_PHOTOGATES] = {0,0};
-
-    if (photogateNum >= constants::NUMBER_OF_PHOTOGATES)
+    for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
     {
-        return;
+        photogate_[i].setLedFromSignal();
     }
+    //static bool state[constants::NUMBER_OF_PHOTOGATES] = {0,0};
 
-    if (state[photogateNum] == true)
-    {
-        photogate_[photogateNum].setLedOff();
-        state[photogateNum] = false;
-    }
-    else
-    {
-        photogate_[photogateNum].setLedOn();
-        state[photogateNum] = true;
-    }
+    //if (photogateNum >= constants::NUMBER_OF_PHOTOGATES)
+    //{
+    //    return;
+    //}
 
+    //if (state[photogateNum] == true)
+    //{
+    //    photogate_[photogateNum].setLedOff();
+    //    state[photogateNum] = false;
+    //}
+    //else
+    //{
+    //    photogate_[photogateNum].setLedOn();
+    //    state[photogateNum] = true;
+    //}
 
 }
 
@@ -125,10 +128,7 @@ void SystemState::updatePhotogateLed()
 {
     for (int i=0; i<constants::NUMBER_OF_PHOTOGATES;i++)
     {
-        if (photogate_[i].isConnected())
-        {
-
-        }
+        photogate_[i].setLedFromSignal();
     }
 }
 

@@ -41,6 +41,7 @@ class Photogate
 
         unsigned long  getEntryTime();
         unsigned long  getExitTime();
+        State getState();
         bool hasEntryTime();
         bool hasExitTime();
         bool isDone();
@@ -56,17 +57,17 @@ class Photogate
         inline void setLedFromSignal();
         inline void setLedFromSignal(int signal);
         inline int getSignal();
-        inline State getState();
+        inline State getStateUnsafe();
         inline bool isConnected();
         inline void update();
 
     protected:
 
-        PhotogateConfig config_;
-        unsigned long entryTime_;
-        unsigned long exitTime_;
-        State state_;
         bool initFlag_;
+        PhotogateConfig config_;
+        volatile unsigned long entryTime_;  // Value changed in interrupt 
+        volatile unsigned long exitTime_;   // Value changed in interrupt
+        volatile State state_;              // Value changed in interrupt
 
         // Store pin masks and port output registers for faster digital IO
         uint8_t ledPinBitMask_;
@@ -77,10 +78,10 @@ class Photogate
         volatile uint8_t *autoDetectPortInReg_;
         volatile uint8_t *signalPortInReg_;
 
-        void updateLedBitMaskAndPort();
-        void updateSignalBitMaskAndPort();
-        void updateAutoDetectBitMaskAndPort();
-        void updateAllBitMaskAndPort();
+        void setLedBitMaskAndPort();
+        void setSignalBitMaskAndPort();
+        void setAutoDetectBitMaskAndPort();
+        void setAllBitMaskAndPort();
 
 };
 
@@ -137,8 +138,9 @@ inline int Photogate::getSignal()
 }
 
 
-inline Photogate::State Photogate::getState()
+inline Photogate::State Photogate::getStateUnsafe()
 {
+    // Fast access function - only for use in interrupt or ATOMIC_BLOCK
     return state_;
 }
  
@@ -185,7 +187,6 @@ inline void Photogate::update()
                 break;
 
             default:
-                // state_ not READY, MEASURING, or done - shouldn't happen
                 break;
         }
     }

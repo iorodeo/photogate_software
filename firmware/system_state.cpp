@@ -1,5 +1,6 @@
 #include "system_state.h"
 #include <Streaming.h>
+#include <util/atomic.h>
 #include "firmware.h"
 #include "utility.h"
 
@@ -49,9 +50,19 @@ void SystemState::reset()
         photogate_[i].reset();
     }
     running_ = true;
+    timeout_ = false;
     interrupts();
 }
 
+bool SystemState::isDone()
+{
+    bool done = true;
+    for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
+    {
+        done &= photogate_[i].isDone(); 
+    }
+    return done;
+}
 
 void SystemState::update()
 {
@@ -59,6 +70,7 @@ void SystemState::update()
     checkForResetButton();
     updatePhotogateLed();
     checkRunTime();
+    checkForDone();
 }
 
 
@@ -96,12 +108,17 @@ void SystemState::sendListData()
 {
     Serial << '[';
     Serial << running_ << ',';
+    Serial << timeout_ << ',';
     Serial << operatingMode_ << ',';
     Serial << startTime_ << ',';
     Serial << getRunTime() << ',';
     for (int i=0; i < constants::NUMBER_OF_PHOTOGATES; i++)
     {
         photogate_[i].sendListData();
+        if (i < constants::NUMBER_OF_PHOTOGATES-1)
+        {
+            Serial << ',';
+        }
     }
     Serial << ']';
 }
@@ -110,6 +127,7 @@ void SystemState::sendJsonData()
 {
     Serial << '{';
     Serial << "\"running\"" << ':' << boolToStr(running_);
+    Serial << ",\"timeout\"" << ':' << boolToStr(timeout_);
     Serial << ",\"operatingMode\"" << ':' << getOperatingModeStr();
     Serial << ",\"startTime\"" << ':' << startTime_;
     Serial << ",\"runTime\"" << ':' << getRunTime();
@@ -129,6 +147,7 @@ void SystemState::sendJsonData()
 void SystemState::sendPrettyData()
 {
     Serial << "running:       " << running_ << endl;
+    Serial << "timeout:       " << timeout_ << endl;
     Serial << "operatingMode: " << operatingMode_ << endl;
     Serial << "startTime:     " << startTime_ << endl;
     Serial << "runTime:       " <<  getRunTime() << endl;
@@ -162,16 +181,52 @@ const char* SystemState::getOperatingModeStr()
 
 unsigned long SystemState::getRunTime()
 {
+    unsigned long runTime = 0;
     if (running_)
     {
+        // Still running - runtime is elapsed time.
         unsigned long currTime = micros();
-        unsigned long runTime = currTime - startTime_;
-        return runTime;
+        runTime = currTime - startTime_;
     }
     else
     {
-        return constants::MAXIMUM_RUNTIME;
+        if (!timeout_)
+        {
+            // No timeout - calculate runtime based on exit times.
+            if (operatingMode_ == ONE_PHOTOGATE)
+            {   
+                // Runtime is exitTime - startTime for (only) connected photogate
+                for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
+                {
+                    if (photogate_[i].isConnected())
+                    {
+                        unsigned long  exitTime = photogate_[i].getExitTime();
+                        runTime = exitTime  - startTime_;
+                        break;
+                    }
+                }
+            }
+            else if (operatingMode_ == TWO_PHOTOGATE)
+            {
+                // Runtime maximum over all photogate e.g. maximum (exitTime - startTime)
+                for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
+                {
+                    unsigned long exitTime = photogate_[i].getExitTime();
+                    unsigned long runTimeTmp = exitTime - startTime_;
+                    if (runTimeTmp > runTime)
+                    {
+                        runTime = runTimeTmp;
+                    }
+                }
+            }
+        } // if (!timeout)
+        else
+        {
+            // We timed out - run time is maximum allowed runtime.
+            runTime =  constants::MAXIMUM_RUNTIME;
+        }
     }
+    return runTime;
 }
 
 
@@ -201,7 +256,7 @@ void SystemState::onPhotogatePinChange(int photogateNum)
             else
             {
                 // Photogate 1 update only if photoage 0 has registered an event 
-                if (photogate_[0].getState() != Photogate::READY)
+                if (photogate_[0].getStateUnsafe() != Photogate::READY)
                 {
                     photogate_[photogateNum].update();
                 }
@@ -279,6 +334,19 @@ void  SystemState::checkRunTime()
     unsigned long runTime = getRunTime();
     if (runTime >= constants::MAXIMUM_RUNTIME)
     {
-        running_ = false;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+        {
+            running_ = false;
+            timeout_ = true;
+        }
     } 
+}
+
+
+void SystemState::checkForDone()
+{
+    if (isDone())
+    {
+        running_ = false;
+    }
 }

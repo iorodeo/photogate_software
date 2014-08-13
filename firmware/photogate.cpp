@@ -1,4 +1,5 @@
 #include "photogate.h"
+#include <util/atomic.h>
 #include <Streaming.h>
 #include "utility.h"
 
@@ -45,7 +46,7 @@ PhotogateConfig Photogate::getConfig()
 void Photogate::setConfig(PhotogateConfig config)
 {
     config_ = config;
-    updateAllBitMaskAndPort();
+    setAllBitMaskAndPort();
 }
 
 
@@ -67,7 +68,7 @@ int Photogate::getLedPin()
 void Photogate::setLedPin(int pinNum)
 {
     config_.ledPin =  pinNum;
-    updateLedBitMaskAndPort();
+    setLedBitMaskAndPort();
 }
 
 
@@ -79,7 +80,7 @@ int Photogate::getSignalPin()
 void Photogate::setSignalPin(int pinNum)
 {
     config_.signalPin = pinNum;
-    updateSignalBitMaskAndPort();
+    setSignalBitMaskAndPort();
 }
 
 
@@ -92,7 +93,7 @@ int Photogate::getAutoDetectPin()
 void Photogate::setAutoDetectPin(int pinNum)
 {
     config_.autoDetectPin = pinNum;
-    updateAutoDetectBitMaskAndPort();
+    setAutoDetectBitMaskAndPort();
 }
 
 
@@ -104,19 +105,41 @@ int Photogate::getInterruptNum()
 
 unsigned long  Photogate::getEntryTime()
 {
-    return entryTime_;
+    unsigned long entryTimeCpy;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        entryTimeCpy = entryTime_;
+    }
+    return entryTimeCpy;
 }
 
 
 unsigned long  Photogate::getExitTime()
 {
-    return exitTime_;
+    unsigned long exitTimeCpy;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        exitTimeCpy = exitTime_;
+    }
+
+    return exitTimeCpy;
+}
+
+
+Photogate::State Photogate::getState()
+{
+    State stateCpy;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        stateCpy = state_;
+    }
+    return stateCpy;
 }
 
 
 bool Photogate::hasEntryTime()
 {
-    if (state_ != READY)
+    if (getState() != READY)
     {
         return true;
     }
@@ -129,7 +152,7 @@ bool Photogate::hasEntryTime()
 
 bool Photogate::hasExitTime()
 {
-    if (state_ == DONE)
+    if (getState() == DONE)
     {
         return true;
     }
@@ -155,12 +178,12 @@ bool Photogate::isDone()
 
 void Photogate::sendListData()
 {
-    Serial << state_ << ',';
+    Serial << getState() << ',';
     Serial << hasEntryTime() << ',';
-    Serial << entryTime_ << ',';
+    Serial << getEntryTime() << ',';
     Serial << hasExitTime() << ',';
-    Serial << exitTime_ << ',';
-    Serial << isDone() << ',';
+    Serial << getExitTime() << ',';
+    Serial << isDone();
 }
 
 
@@ -180,18 +203,18 @@ void Photogate::sendJsonData()
 
 void Photogate::sendPrettyData()
 {
-    Serial << "  state:        " << state_ << endl;
+    Serial << "  state:        " << getState() << endl;
     Serial << "  hasEntryTime: " << hasEntryTime() << endl;
-    Serial << "  entryTime:    " << entryTime_ << endl;
+    Serial << "  entryTime:    " << getEntryTime() << endl;
     Serial << "  hasExitTime:  " << hasExitTime() << endl;
-    Serial << "  exitTime:     " << exitTime_ << endl;
+    Serial << "  exitTime:     " << getExitTime() << endl;
     Serial << "  isDone:       " << isDone() << endl;
 }
 
 
 const char* Photogate::getStateStr()
 {
-    switch (state_)
+    switch (getState())
     {
         case READY:
             return "READY";
@@ -211,14 +234,14 @@ const char* Photogate::getStateStr()
 // Photogate Protected methods
 // ----------------------------------------------------------------------------
 
-void Photogate::updateAllBitMaskAndPort()
+void Photogate::setAllBitMaskAndPort()
 {
-    updateSignalBitMaskAndPort();
-    updateLedBitMaskAndPort();
-    updateAutoDetectBitMaskAndPort();
+    setSignalBitMaskAndPort();
+    setLedBitMaskAndPort();
+    setAutoDetectBitMaskAndPort();
 }
 
-void Photogate::updateSignalBitMaskAndPort()
+void Photogate::setSignalBitMaskAndPort()
 {
     signalPinBitMask_ = digitalPinToBitMask(config_.signalPin);
     uint8_t signalPort = digitalPinToPort(config_.signalPin);
@@ -226,7 +249,7 @@ void Photogate::updateSignalBitMaskAndPort()
 }
 
 
-void Photogate::updateLedBitMaskAndPort()
+void Photogate::setLedBitMaskAndPort()
 {
     ledPinBitMask_ = digitalPinToBitMask(config_.ledPin);
     uint8_t ledPort = digitalPinToPort(config_.ledPin);
@@ -234,7 +257,7 @@ void Photogate::updateLedBitMaskAndPort()
 }
 
 
-void Photogate::updateAutoDetectBitMaskAndPort()
+void Photogate::setAutoDetectBitMaskAndPort()
 {
     autoDetectPinBitMask_ = digitalPinToBitMask(config_.autoDetectPin);
     uint8_t autoDetectPort = digitalPinToPort(config_.autoDetectPin);

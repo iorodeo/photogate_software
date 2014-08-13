@@ -12,6 +12,7 @@ class SystemState
         void initialize();
         void update();
         void reset();
+        bool isDone();
         void handleSerialRequest();
         void sendListData();
         void sendJsonData();
@@ -25,11 +26,14 @@ class SystemState
         unsigned long startTime_;
         OperatingMode operatingMode_;
         bool running_;
+        bool timeout_;
 
         void checkOperatingMode();
         void checkForResetButton();
-        void updatePhotogateLed();
         void checkRunTime();
+        void checkForDone();
+        void updatePhotogateLed();
+        
 };
 
 #endif

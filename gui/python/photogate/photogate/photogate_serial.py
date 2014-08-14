@@ -15,15 +15,23 @@ class PhotogateDevice(serial.Serial):
         self.reset()
         self.flushInput()
         self.flushOutput()
+        self.clearInWaiting()
 
     def reset(self):
         self.write('r')
+
+    def clearInWaiting(self):
+        while self.inWaiting()>0:
+            self.read()
 
     def getData(self):
         self.write('j')
         jsonStr = self.readline()
         jsonStr = jsonStr.strip()
-        dataDict = json.loads(jsonStr)
+        try:
+            dataDict = json.loads(jsonStr)
+        except ValueError:
+            dataDict = {}
         return dataDict
 
 # -----------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'photogate.ui'
 #
-# Created: Wed Aug 13 22:16:10 2014
+# Created: Thu Aug 14 09:54:00 2014
 #      by: PyQt4 UI code generator 4.7.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -41,6 +41,9 @@ class Ui_PhotogateMainWindow(object):
         self.horizontalLayout_2.addWidget(self.modeLabel)
         self.verticalLayout.addWidget(self.infoFrame)
         self.dataText = QtGui.QPlainTextEdit(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Monospace")
+        self.dataText.setFont(font)
         self.dataText.setReadOnly(True)
         self.dataText.setObjectName("dataText")
         self.verticalLayout.addWidget(self.dataText)
@@ -71,10 +74,6 @@ class Ui_PhotogateMainWindow(object):
         self.portComboBox.setMinimumSize(QtCore.QSize(140, 0))
         self.portComboBox.setObjectName("portComboBox")
         self.horizontalLayout.addWidget(self.portComboBox)
-        self.scanPushButton = QtGui.QPushButton(self.controlsFrame)
-        self.scanPushButton.setMaximumSize(QtCore.QSize(60, 16777215))
-        self.scanPushButton.setObjectName("scanPushButton")
-        self.horizontalLayout.addWidget(self.scanPushButton)
         self.connectPushButton = QtGui.QPushButton(self.controlsFrame)
         self.connectPushButton.setObjectName("connectPushButton")
         self.horizontalLayout.addWidget(self.connectPushButton)
@@ -107,10 +106,9 @@ class Ui_PhotogateMainWindow(object):
 
     def retranslateUi(self, PhotogateMainWindow):
         PhotogateMainWindow.setWindowTitle(QtGui.QApplication.translate("PhotogateMainWindow", "MainWindow", None, QtGui.QApplication.UnicodeUTF8))
-        self.timeLabel.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Time: ", None, QtGui.QApplication.UnicodeUTF8))
-        self.modeLabel.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Mode:", None, QtGui.QApplication.UnicodeUTF8))
+        self.timeLabel.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Time: __.__ ", None, QtGui.QApplication.UnicodeUTF8))
+        self.modeLabel.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Mode:              ", None, QtGui.QApplication.UnicodeUTF8))
         self.label.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Port", None, QtGui.QApplication.UnicodeUTF8))
-        self.scanPushButton.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Scan", None, QtGui.QApplication.UnicodeUTF8))
         self.connectPushButton.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Connect", None, QtGui.QApplication.UnicodeUTF8))
         self.resetPushButton.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Reset", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("PhotogateMainWindow", "File", None, QtGui.QApplication.UnicodeUTF8))

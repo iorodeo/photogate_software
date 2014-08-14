@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'photogate.ui'
 #
-# Created: Thu Aug 14 09:54:00 2014
+# Created: Thu Aug 14 12:50:15 2014
 #      by: PyQt4 UI code generator 4.7.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -97,21 +97,25 @@ class Ui_PhotogateMainWindow(object):
         self.actionSaveMat.setObjectName("actionSaveMat")
         self.actionSaveTxt = QtGui.QAction(PhotogateMainWindow)
         self.actionSaveTxt.setObjectName("actionSaveTxt")
+        self.actionSaveCsv = QtGui.QAction(PhotogateMainWindow)
+        self.actionSaveCsv.setObjectName("actionSaveCsv")
         self.menuFile.addAction(self.actionSaveMat)
         self.menuFile.addAction(self.actionSaveTxt)
+        self.menuFile.addAction(self.actionSaveCsv)
         self.menubar.addAction(self.menuFile.menuAction())
 
         self.retranslateUi(PhotogateMainWindow)
         QtCore.QMetaObject.connectSlotsByName(PhotogateMainWindow)
 
     def retranslateUi(self, PhotogateMainWindow):
-        PhotogateMainWindow.setWindowTitle(QtGui.QApplication.translate("PhotogateMainWindow", "MainWindow", None, QtGui.QApplication.UnicodeUTF8))
+        PhotogateMainWindow.setWindowTitle(QtGui.QApplication.translate("PhotogateMainWindow", "Photogate Sensor", None, QtGui.QApplication.UnicodeUTF8))
         self.timeLabel.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Time: __.__ ", None, QtGui.QApplication.UnicodeUTF8))
         self.modeLabel.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Mode:              ", None, QtGui.QApplication.UnicodeUTF8))
         self.label.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Port", None, QtGui.QApplication.UnicodeUTF8))
         self.connectPushButton.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Connect", None, QtGui.QApplication.UnicodeUTF8))
         self.resetPushButton.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Reset", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("PhotogateMainWindow", "File", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionSaveMat.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Save Mat", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionSaveTxt.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Save Txt", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionSaveMat.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Save mat", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionSaveTxt.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Save txt", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionSaveCsv.setText(QtGui.QApplication.translate("PhotogateMainWindow", "Save csv", None, QtGui.QApplication.UnicodeUTF8))
 

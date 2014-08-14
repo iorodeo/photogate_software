@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 import sys
 import serial.tools.list_ports
 from PyQt4 import QtCore
@@ -12,6 +13,11 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
     PORT_MONITOR_TIMER_DT = 1000
     DATA_ACQUISITION_TIMER_DT = 50 
     NOT_AVAILABLE_STR = ''
+    FILE_TYPE_TO_FILTER = {
+            '.txt' : "Text (*.txt);;All files (*.*)",
+            '.mat' : "Mat (*.mat);;All files (*.*)",
+            '.csv' : "CSV (*.csv);;All files (*.*)",
+            }
 
     def __init__(self,parent=None):
         super(PhotogateMainWindow,self).__init__(parent)
@@ -25,6 +31,7 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
         self.resetPushButton.clicked.connect(self.resetClicked_Callback)
         self.actionSaveMat.triggered.connect(self.saveMat_Callback)
         self.actionSaveTxt.triggered.connect(self.saveTxt_Callback)
+        self.actionSaveCsv.triggered.connect(self.saveCsv_Callback)
 
     def main(self):
         self.show()
@@ -32,6 +39,12 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
 
     def initialize(self):
         self.dev = None
+        self.lastDataDict = None
+        self.userHome = os.getenv('USERPROFILE')
+        if self.userHome is None:
+            self.userHome = os.getenv('HOME')
+        self.lastSaveDir = self.userHome
+
         self.populatePortComboBox()
         self.updateWidgetEnabled()
         self.setupTimers()
@@ -59,8 +72,14 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
             if dataDict:
                 self.setRunTime(dataDict)
                 self.setMode(dataDict)
-                self.setDataText(dataDict)
                 self.setStatusbarMessage(dataDict)
+                if self.lastDataDict is not None:
+                    if self.lastDataDict['running']:
+                        self.setDataText(dataDict)
+                else:
+                    self.setDataText(dataDict)
+                self.lastDataDict = dataDict
+                self.updateSaveWidgetEnabled()
 
     def connectPressed_Callback(self):
         if self.dev is None:
@@ -81,11 +100,50 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
         if self.dev is not None:
             self.dev.reset()
 
+    def fileSaveDialog(self,fileType):
+        dialog = QtGui.QFileDialog()
+        dialog.setFileMode(QtGui.QFileDialog.AnyFile) 
+        if os.path.isdir(self.lastSaveDir):
+            saveDir = self.lastSaveDir
+        else:
+            saveDir = self.userHome
+        fileNameFullPath = dialog.getSaveFileName(
+                   None,
+                   'Select {0} file'.format(fileType),
+                   saveDir,
+                   self.FILE_TYPE_TO_FILTER[fileType],
+                   options=QtGui.QFileDialog.DontUseNativeDialog,
+                   )              
+        fileNameFullPath = str(fileNameFullPath)
+        if fileNameFullPath:
+            # Extract last save path and check for file extension 
+            filePath, fileName = os.path.split(fileNameFullPath)
+            self.lastSaveDir = filePath
+            fileName = autoAddFileExtension(fileName,fileExt)
+            fileNameFullPath = os.path.join(filePath,fileName)
+        return fileNameFullPath
+
     def saveMat_Callback(self):
-        print('save mat')
+        fileExt = '.mat'
+        dataStr = self.getDataStr(self.lastDataDict)
+        fileNameFullPath = self.fileSaveDialog(fileExt)
+        if not fileNameFullPath:
+            return
 
     def saveTxt_Callback(self):
-        print('save txt')
+        fileExt = '.txt'
+        dataStr = self.getDataStr(self.lastDataDict)
+        fileNameFullPath = self.fileSaveDialog(fileExt)
+        if fileNameFullPath:
+            with open(fileNameFullPath,'w') as f:
+                f.write(dataStr)
+
+    def saveCsv_Callback(self):
+        fileExt = '.csv'
+        dataStr = self.getDataStr(self.lastDataDict)
+        fileNameFullPath = self.fileSaveDialog(fileExt)
+        if fileNameFullPath:
+            pass
 
     def connectDevice(self):
         port = str(self.portComboBox.currentText())
@@ -126,6 +184,22 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
             self.infoFrame.setEnabled(True)
             self.dataText.setEnabled(True)
             self.resetPushButton.setEnabled(True)
+        self.updateSaveWidgetEnabled()
+
+    def updateSaveWidgetEnabled(self): 
+        if self.lastDataDict is not None:
+            if not self.lastDataDict['running'] and not self.lastDataDict['timeout']:
+                self.actionSaveMat.setEnabled(True)
+                self.actionSaveTxt.setEnabled(True)
+                self.actionSaveCsv.setEnabled(True)
+            else:
+                self.actionSaveMat.setEnabled(False)
+                self.actionSaveTxt.setEnabled(False)
+                self.actionSaveCsv.setEnabled(False)
+        else:
+            self.actionSaveMat.setEnabled(False)
+            self.actionSaveTxt.setEnabled(False)
+            self.actionSaveCsv.setEnabled(False)
 
     def populatePortComboBox(self):
         currPort = str(self.portComboBox.currentText())
@@ -170,8 +244,7 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
                 message = 'Measurement Complete'
         self.statusbar.showMessage(message)
 
-    def setDataText(self,dataDict):
-        self.dataText.clear()
+    def getDataStr(self,dataDict):
         dataStrList = []
         infoStr = 'Timing Data (units = s, resolution = 10us)'
         dataStrList.append(infoStr)
@@ -190,22 +263,25 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
             if dataDict['running'] or dataDict['timeout']:
                 timeBetweenStr = self.NOT_AVAILABLE_STR
             else:
-                entryTime0 = uSecToSec(float(dataDict['photogates'][0]['entryTime']))
-                entryTime1 = uSecToSec(float(dataDict['photogates'][1]['entryTime']))
-                timeBetween = entryTime1 - entryTime0
+                timeBetween = getTimeBetweenGates(dataDict['photogates'])
                 timeBetweenStr = '{0:1.5f}'.format(timeBetween)
             timeBetweenStr = 'between-gates: {0}'.format(timeBetweenStr)
             dataStrList.append(timeBetweenStr)
 
         dataStr = '\n'.join(dataStrList)
+        return dataStr
+
+    def setDataText(self,dataDict):
+        dataStr = self.getDataStr(dataDict)
+        self.dataText.clear()
         self.dataText.setPlainText(dataStr)
 
     def getPhotogateDataStr(self,photogateDict, indent=2):
         indentStr = ' '*indent
         dataStrList = []
+        entryTime, exitTime, timeInGate = getPhotogateTimes(photogateDict)
 
         # Add entry time
-        entryTime = uSecToSec(float(photogateDict['entryTime']))
         if photogateDict['hasEntryTime']:
             entryTimeStr = '{0:1.5f}'.format(entryTime)
         else:
@@ -214,7 +290,6 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
         dataStrList.append(entryTimeStr)
 
         # Add exit time
-        exitTime = uSecToSec(float(photogateDict['exitTime']))
         if photogateDict['hasExitTime']:
             exitTimeStr ='{0:1.5f}'.format(exitTime) 
         else:
@@ -222,8 +297,7 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
         exitTimeStr = '{0}exit:    {1}'.format(indentStr, exitTimeStr)
         dataStrList.append(exitTimeStr)
 
-        # Add time in gate
-        timeInGate = exitTime - entryTime
+        # Add time in-gate
         if photogateDict['isDone']:
             timeInGateStr = '{0:1.5f}'.format(timeInGate)
         else:
@@ -235,18 +309,37 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
         return dataStr
 
 
-      
+# Utility functions
+# -----------------------------------------------------------------------------
+
+def getPhotogateTimes(photogateDict):
+    entryTime = uSecToSec(float(photogateDict['entryTime']))
+    exitTime = uSecToSec(float(photogateDict['exitTime']))
+    timeInGate = exitTime - entryTime
+    return entryTime, exitTime, timeInGate
+
+def getTimeBetweenGates(photogateList): 
+    entryTime0 = uSecToSec(float(photogateList[0]['entryTime'])) 
+    entryTime1 = uSecToSec(float(photogateList[1]['entryTime'])) 
+    timeBetween = entryTime1 - entryTime0
+    return timeBetween
+
 def runPhotogateApp():
     app = QtGui.QApplication(sys.argv)
     mainWindow = PhotogateMainWindow()
     mainWindow.main()
     app.exec_()
 
+def autoAddFileExtension(fileName,autoExt): 
+    fileNameBase, fileNameExt = os.path.splitext(fileName)
+    if not fileNameExt:
+        # Only add extension if there isn't one already
+        fileName = '{0}{1}'.format(fileNameBase,autoExt)
+    return fileName
 
 def uSecToSec(value):
     return (1.0e-6)*value
     
-
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

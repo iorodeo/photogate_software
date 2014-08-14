@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Photogate Sensor</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -169,18 +169,24 @@
     </property>
     <addaction name="actionSaveMat"/>
     <addaction name="actionSaveTxt"/>
+    <addaction name="actionSaveCsv"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionSaveMat">
    <property name="text">
-    <string>Save Mat</string>
+    <string>Save mat</string>
    </property>
   </action>
   <action name="actionSaveTxt">
    <property name="text">
-    <string>Save Txt</string>
+    <string>Save txt</string>
+   </property>
+  </action>
+  <action name="actionSaveCsv">
+   <property name="text">
+    <string>Save csv</string>
    </property>
   </action>
  </widget>

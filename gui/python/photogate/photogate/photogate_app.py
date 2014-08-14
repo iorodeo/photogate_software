@@ -6,12 +6,17 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 from photogate_ui import Ui_PhotogateMainWindow
 from photogate_serial import PhotogateDevice
+try:
+    import scipy.io
+    HAVE_SCIPY_IO = True
+except ImportError:
+    HAVE_SCIPY_IO = False
 
 
 class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
 
     PORT_MONITOR_TIMER_DT = 1000
-    DATA_ACQUISITION_TIMER_DT = 50 
+    DATA_ACQUISITION_TIMER_DT = 10
     NOT_AVAILABLE_STR = ''
     FILE_TYPE_TO_FILTER = {
             '.txt' : "Text (*.txt);;All files (*.*)",
@@ -57,6 +62,7 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
         self.portMonitorTimer.timeout.connect(self.portMonitorTimer_Callback)
         self.dataAcquisitionTimer = QtCore.QTimer(self)
         self.dataAcquisitionTimer.setInterval(self.DATA_ACQUISITION_TIMER_DT)
+        self.dataAcquisitionTimer.setSingleShot(True); # Serial communications sets the pacing
         self.dataAcquisitionTimer.timeout.connect(self.dataAcquisitionTimer_Callback)
 
     def portMonitorTimer_Callback(self):
@@ -80,6 +86,7 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
                     self.setDataText(dataDict)
                 self.lastDataDict = dataDict
                 self.updateSaveWidgetEnabled()
+        self.dataAcquisitionTimer.start()
 
     def connectPressed_Callback(self):
         if self.dev is None:
@@ -100,7 +107,7 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
         if self.dev is not None:
             self.dev.reset()
 
-    def fileSaveDialog(self,fileType):
+    def fileSaveDialog(self,fileExt):
         dialog = QtGui.QFileDialog()
         dialog.setFileMode(QtGui.QFileDialog.AnyFile) 
         if os.path.isdir(self.lastSaveDir):
@@ -109,9 +116,9 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
             saveDir = self.userHome
         fileNameFullPath = dialog.getSaveFileName(
                    None,
-                   'Select {0} file'.format(fileType),
+                   'Select {0} file'.format(fileExt),
                    saveDir,
-                   self.FILE_TYPE_TO_FILTER[fileType],
+                   self.FILE_TYPE_TO_FILTER[fileExt],
                    options=QtGui.QFileDialog.DontUseNativeDialog,
                    )              
         fileNameFullPath = str(fileNameFullPath)
@@ -124,11 +131,29 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
         return fileNameFullPath
 
     def saveMat_Callback(self):
-        fileExt = '.mat'
-        dataStr = self.getDataStr(self.lastDataDict)
-        fileNameFullPath = self.fileSaveDialog(fileExt)
-        if not fileNameFullPath:
+        if not HAVE_SCIPY_IO:
             return
+        fileExt = '.mat'
+        dataDict = self.lastDataDict
+        fileNameFullPath = self.fileSaveDialog(fileExt)
+        if fileNameFullPath:
+            matDict = self.getMatDict(dataDict)
+            scipy.io.savemat(fileNameFullPath,matDict)
+
+    def getMatDict(self,dataDict):
+        matDict = {}
+        for i, photogateDict in enumerate(dataDict['photogates']):
+            if photogateDict['isConnected']:
+                entryTime, exitTime, timeInGate = getPhotogateTimes(photogateDict)
+                matDict['photogate{0}'.format(i)] = {
+                        'entryTime'   : entryTime,
+                        'exitTime'    : exitTime, 
+                        'timeInGate'  : timeInGate, 
+                        }
+        if dataDict['operatingMode'] == 'TWO_PHOTOGATE':
+            timeBetweenGates = getTimeBetweenGates(dataDict['photogates'])
+            matDict['timeBetweenGates'] = timeBetweenGates
+        return matDict
 
     def saveTxt_Callback(self):
         fileExt = '.txt'
@@ -140,10 +165,26 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
 
     def saveCsv_Callback(self):
         fileExt = '.csv'
-        dataStr = self.getDataStr(self.lastDataDict)
+        dataDict = self.lastDataDict
         fileNameFullPath = self.fileSaveDialog(fileExt)
         if fileNameFullPath:
-            pass
+            csvDataStr = self.getCsvDataStr(dataDict)
+            with open(fileNameFullPath,'w') as f:
+                f.write(csvDataStr)
+
+    def getCsvDataStr(self,dataDict):
+        dataStrList = ['field,value']
+        for i,photogateDict  in enumerate(dataDict['photogates']):
+            if photogateDict['isConnected']:
+                entryTime, exitTime, timeInGate = getPhotogateTimes(photogateDict)
+                dataStrList.append('"photogate {0} enter",{1}'.format(i,entryTime))
+                dataStrList.append('"photogate {0} exit",{1}'.format(i,exitTime))
+                dataStrList.append('"photogate {0} in-gate",{1}'.format(i,timeInGate))
+        if dataDict['operatingMode'] == 'TWO_PHOTOGATE':
+            timeBetweenGates = getTimeBetweenGates(dataDict['photogates'])
+            dataStrList.append('"between gates",{0}'.format(timeBetweenGates))
+        dataStr = '\n'.join(dataStrList)
+        return dataStr
 
     def connectDevice(self):
         port = str(self.portComboBox.currentText())
@@ -189,7 +230,8 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
     def updateSaveWidgetEnabled(self): 
         if self.lastDataDict is not None:
             if not self.lastDataDict['running'] and not self.lastDataDict['timeout']:
-                self.actionSaveMat.setEnabled(True)
+                if HAVE_SCIPY_IO:
+                    self.actionSaveMat.setEnabled(True)
                 self.actionSaveTxt.setEnabled(True)
                 self.actionSaveCsv.setEnabled(True)
             else:

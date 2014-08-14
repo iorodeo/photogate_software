@@ -203,12 +203,12 @@ void Photogate::sendListData(unsigned long startTime)
 void Photogate::sendJsonData(unsigned long startTime)
 {
     Serial << '{';
-    Serial << "\"state\"" << ':' << getStateStr();
+    Serial << "\"state\"" << ':' << "\"" << getStateStr() << "\"";
     Serial << ",\"isConnected\"" << ':' << boolToStr(isConnected());
     Serial << ",\"hasEntryTime\"" << ':' << boolToStr(hasEntryTime());
     Serial << ",\"entryTime\"" << ':' << getEntryTime(startTime);
     Serial << ",\"hasExitTime\"" << ':' << boolToStr(hasExitTime());
-    Serial << ",\"exitTime\"" << ':' << getExitTime(startTime)<< endl;
+    Serial << ",\"exitTime\"" << ':' << getExitTime(startTime);
     Serial << ",\"isDone\"" << ':' << boolToStr(isDone());
     Serial << '}';
 }

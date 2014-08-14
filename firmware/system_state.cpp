@@ -57,10 +57,30 @@ void SystemState::reset()
 bool SystemState::isDone()
 {
     bool done = true;
-    for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
+    switch (operatingMode_)
     {
-        done &= photogate_[i].isDone(); 
+        case ONE_PHOTOGATE:
+            for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
+            {
+                if (photogate_[i].isConnected())
+                {
+                    done = photogate_[i].isDone();
+                    break;
+                }
+            }
+            break;
+
+        case TWO_PHOTOGATE:
+            for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
+            {
+                done &= photogate_[i].isDone(); 
+            }
+            break;
+
+        default:
+            break;
     }
+
     return done;
 }
 
@@ -128,10 +148,10 @@ void SystemState::sendJsonData()
     Serial << '{';
     Serial << "\"running\"" << ':' << boolToStr(running_);
     Serial << ",\"timeout\"" << ':' << boolToStr(timeout_);
-    Serial << ",\"operatingMode\"" << ':' << getOperatingModeStr();
+    Serial << ",\"operatingMode\"" << ':' << "\"" << getOperatingModeStr() << "\"";
     Serial << ",\"startTime\"" << ':' << startTime_;
     Serial << ",\"runTime\"" << ':' << getRunTime();
-    Serial << "[";
+    Serial << ",\"photogates\"" << ":[";
     for (int i=0; i<constants::NUMBER_OF_PHOTOGATES; i++)
     {
         photogate_[i].sendJsonData(startTime_);

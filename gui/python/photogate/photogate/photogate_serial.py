@@ -28,7 +28,7 @@ class PhotogateDev(serial.Serial):
         return dataDict
 
 # -----------------------------------------------------------------------------
-if __name__ == '__main__':
+if __name__ == '__main__': 
 
     port = '/dev/ttyACM0'
     dev = PhotogateDev(port)
@@ -36,4 +36,7 @@ if __name__ == '__main__':
     while True:
         dataDict = dev.getData()
         print(dataDict)
-        #time.sleep(0.05)
+
+        #import serial.tools.list_ports
+        #ports = serial.tools.list_ports.comports()
+        #print(ports)

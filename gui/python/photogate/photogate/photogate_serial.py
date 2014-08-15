@@ -43,22 +43,11 @@ class PhotogateDevice(serial.Serial):
 # -----------------------------------------------------------------------------
 def getListOfPorts():
     systemType = platform.system()
+    portList = [name for name,dummy,dummy in serial.tools.list_ports.comports()]
     if systemType == 'Linux':
-        portList = [name for name,dummy,dummy in serial.tools.list_ports.comports()]
         portList = [name for name in portList if 'USB' in name or 'ACM' in name]
     elif systemType == 'Windows':
-        # Note, serial.tools.list_ports.comports doesn't seem to list all ports - so
-        # I'm using a different method here
-        path = 'HARDWARE\\DEVICEMAP\\SERIALCOMM'
-        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path)
-        portList = []
-        for i in itertools.count():
-            try:
-                val = winreg.EnumValue(key, i)
-                portList.append(str(val[1]))
-            except EnvironmentError:
-                break
-
+        portList = [name for name in portList if 'COM' in name]
     else:
         raise RuntimeError, '{0} not supported yet'.format(platform.system())
     return portList

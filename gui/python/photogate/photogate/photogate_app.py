@@ -6,6 +6,8 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 from photogate_ui import Ui_PhotogateMainWindow
 from photogate_serial import PhotogateDevice
+from photogate_serial import getListOfPorts
+import dependency_hack
 try:
     import scipy.io
     HAVE_SCIPY_IO = True
@@ -246,8 +248,7 @@ class PhotogateMainWindow(QtGui.QMainWindow, Ui_PhotogateMainWindow):
     def populatePortComboBox(self):
         currPort = str(self.portComboBox.currentText())
         self.portComboBox.clear()
-        portNameList = [name for name,dummy,dummy in serial.tools.list_ports.comports()]
-        portNameList = [name for name in portNameList if 'USB' in name or 'ACM' in name]
+        portNameList = getListOfPorts()
         for portName in portNameList:
             self.portComboBox.addItem(portName)
         try:

@@ -1,8 +1,13 @@
 from __future__ import print_function
 import serial
-import platform
 import time
 import json
+import platform
+import itertools
+
+if platform.system() == 'Windows':
+    import _winreg as winreg
+
 
 class PhotogateDevice(serial.Serial):
 
@@ -34,13 +39,43 @@ class PhotogateDevice(serial.Serial):
             dataDict = {}
         return dataDict
 
+# Utility functions
+# -----------------------------------------------------------------------------
+def getListOfPorts():
+    systemType = platform.system()
+    if systemType == 'Linux':
+        portList = [name for name,dummy,dummy in serial.tools.list_ports.comports()]
+        portList = [name for name in portList if 'USB' in name or 'ACM' in name]
+    elif systemType == 'Windows':
+        # Note, serial.tools.list_ports.comports doesn't seem to list all ports - so
+        # I'm using a different method here
+        path = 'HARDWARE\\DEVICEMAP\\SERIALCOMM'
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path)
+        portList = []
+        for i in itertools.count():
+            try:
+                val = winreg.EnumValue(key, i)
+                portList.append(str(val[1]))
+            except EnvironmentError:
+                break
+
+    else:
+        raise RuntimeError, '{0} not supported yet'.format(platform.system())
+    return portList
+
 # -----------------------------------------------------------------------------
 if __name__ == '__main__': 
 
-    port = '/dev/ttyACM0'
-    dev = PhotogateDevice(port)
+    if 0:
 
-    while True:
-        dataDict = dev.getData()
-        print(dataDict)
+        port = '/dev/ttyACM0'
+        dev = PhotogateDevice(port)
+
+        while True:
+            dataDict = dev.getData()
+            print(dataDict)
+
+    if 1:
+        portList = getListOfPorts()
+        print(portList)
 

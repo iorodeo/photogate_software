@@ -29,9 +29,7 @@ class PhotogateDevice(serial.Serial):
     def getData(self):
         self.write('j')
         jsonStr = self.readline()
-        print(jsonStr)
         jsonStr = jsonStr.strip()
-        print(jsonStr)
         try:
             dataDict = json.loads(jsonStr)
         except ValueError:

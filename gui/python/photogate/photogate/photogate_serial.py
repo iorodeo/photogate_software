@@ -9,15 +9,15 @@ import itertools
 class PhotogateDevice(serial.Serial):
 
     BAUDRATE = 115200
-    RESET_TIMEOUT = 2.0
+    RESET_TIMEOUT = 2.5
 
     def __init__(self, port='/dev/ttyACM0', timeout=1.0):
         super(PhotogateDevice,self).__init__(port,self.BAUDRATE,timeout=timeout)
         time.sleep(self.RESET_TIMEOUT)
-        self.reset()
         self.flushInput()
         self.flushOutput()
         self.clearInWaiting()
+        self.reset()
 
     def reset(self):
         self.write('r')
@@ -29,12 +29,21 @@ class PhotogateDevice(serial.Serial):
     def getData(self):
         self.write('j')
         jsonStr = self.readline()
+        print(jsonStr)
         jsonStr = jsonStr.strip()
+        print(jsonStr)
         try:
             dataDict = json.loads(jsonStr)
         except ValueError:
             dataDict = {}
         return dataDict
+
+    def getCommCheck(self):
+        self.write('a')
+        val = self.readline()
+        print(val)
+        return val
+
 
 # Utility functions
 # -----------------------------------------------------------------------------
@@ -52,15 +61,16 @@ def getListOfPorts():
 # -----------------------------------------------------------------------------
 if __name__ == '__main__': 
 
-    if 0:
+    if 1:
         port = '/dev/ttyACM0'
         dev = PhotogateDevice(port)
 
         while True:
             dataDict = dev.getData()
             print(dataDict)
+            #dev.getCommCheck()
 
-    if 1:
+    if 0:
         portList = getListOfPorts()
         print(portList)
 

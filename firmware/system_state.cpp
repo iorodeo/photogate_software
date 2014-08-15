@@ -115,6 +115,11 @@ void SystemState::handleSerialRequest()
 
             case 'p':
                 sendPrettyData();
+                break;
+
+            case 'a':
+                Serial << 'a' << endl;
+                break;
 
             default:
                 break;

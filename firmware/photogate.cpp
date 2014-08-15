@@ -217,6 +217,7 @@ void Photogate::sendJsonData(unsigned long startTime)
 void Photogate::sendPrettyData(unsigned long startTime)
 {
     Serial << "  state:        " << getState() << endl;
+    Serial << "  isConnected   " << isConnected() << endl;
     Serial << "  hasEntryTime: " << hasEntryTime() << endl;
     Serial << "  entryTime:    " << getEntryTime(startTime) << endl;
     Serial << "  hasExitTime:  " << hasExitTime() << endl;

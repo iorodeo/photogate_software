@@ -5,9 +5,6 @@ import json
 import platform
 import itertools
 
-if platform.system() == 'Windows':
-    import _winreg as winreg
-
 
 class PhotogateDevice(serial.Serial):
 
@@ -56,7 +53,6 @@ def getListOfPorts():
 if __name__ == '__main__': 
 
     if 0:
-
         port = '/dev/ttyACM0'
         dev = PhotogateDevice(port)
 

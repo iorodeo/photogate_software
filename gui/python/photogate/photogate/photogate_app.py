@@ -367,12 +367,6 @@ def getTimeBetweenGates(photogateList):
     timeBetween = entryTime1 - entryTime0
     return timeBetween
 
-def runPhotogateApp():
-    app = QtGui.QApplication(sys.argv)
-    mainWindow = PhotogateMainWindow()
-    mainWindow.main()
-    app.exec_()
-
 def autoAddFileExtension(fileName,autoExt): 
     fileNameBase, fileNameExt = os.path.splitext(fileName)
     if not fileNameExt:
@@ -383,6 +377,11 @@ def autoAddFileExtension(fileName,autoExt):
 def uSecToSec(value):
     return (1.0e-6)*value
     
+def runPhotogateApp():
+    app = QtGui.QApplication(sys.argv)
+    mainWindow = PhotogateMainWindow()
+    mainWindow.main()
+    app.exec_()
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

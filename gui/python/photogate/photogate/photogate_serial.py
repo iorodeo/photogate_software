@@ -14,17 +14,19 @@ class PhotogateDevice(serial.Serial):
     def __init__(self, port='/dev/ttyACM0', timeout=1.0):
         super(PhotogateDevice,self).__init__(port,self.BAUDRATE,timeout=timeout)
         time.sleep(self.RESET_TIMEOUT)
+        if platform.system() == 'Linux':
+            self.posixHack()
         self.flushInput()
         self.flushOutput()
         self.clearInWaiting()
         self.reset()
 
-    def reset(self):
-        self.write('r')
-
     def clearInWaiting(self):
         while self.inWaiting()>0:
             self.read()
+
+    def reset(self):
+        self.write('r')
 
     def getData(self):
         self.write('j')
@@ -36,11 +38,13 @@ class PhotogateDevice(serial.Serial):
             dataDict = {}
         return dataDict
 
-    def getCommCheck(self):
-        self.write('a')
-        val = self.readline()
-        print(val)
-        return val
+    def posixHack(self):
+        # Toggle baudrate ... fixes issue which seem to effect pyserial 2.7 and
+        # Arduino Uno's on Linux.. Basically When device is unplugged and re-connected 
+        # communications using pyserial don't seem to work properly. Toggling the 
+        # baudrate seems to fix this. Note, I'm not really sure why this works. 
+        self.baudrate = 9600
+        self.baudrate = self.BAUDRATE
 
 
 # Utility functions
@@ -66,7 +70,6 @@ if __name__ == '__main__':
         while True:
             dataDict = dev.getData()
             print(dataDict)
-            #dev.getCommCheck()
 
     if 0:
         portList = getListOfPorts()
